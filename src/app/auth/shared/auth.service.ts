@@ -12,7 +12,23 @@ import { map, tap } from 'rxjs/operators';
 })
 export class AuthService {
 
+  refreshTokenPayload = {
+    refreshToken: this.getRefreshToken(),
+    username: this.getUsername()
+  }
+
   constructor(private httpClient: HttpClient, private localStorage: LocalStorageService) { }
+
+  refreshToken() {
+    return this.httpClient.post<LoginResponsePayload>('http://localhost:8080/api/auth/refresh/token', this.refreshTokenPayload)
+        .pipe(tap(response => {
+          this.localStorage.clear('authenticationToken');
+          this.localStorage.clear('expiresAt');
+
+          this.localStorage.store('authenticationToken', response.authenticationToken);
+          this.localStorage.store('expiresAt', response.expiresAt);
+        }));
+  }
 
   signup(signupRequestPayload: SignupRequestPayload):Observable<any> {
     return this.httpClient.post('http://localhost:8080/api/auth/signup', signupRequestPayload, { responseType: 'text' });
@@ -28,6 +44,22 @@ export class AuthService {
 
         return true;
       }))
+  }
+
+  getJwtToken() {
+    return this.localStorage.retrieve('authenticationToken');
+  }
+
+  getUsername() {
+    return this.localStorage.retrieve('username');
+  }
+
+  getRefreshToken() {
+    return this.localStorage.retrieve('refreshToken');
+  }
+
+  isLoggedIn(): boolean {
+    return this.getJwtToken() != null;
   }
 
 }
